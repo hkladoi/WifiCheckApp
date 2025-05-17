@@ -1,0 +1,81 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="WifiCheckApp.MainPage"
+             BackgroundColor="White">
+
+    <Grid RowDefinitions="Auto,*,Auto" Padding="20">
+        <VerticalStackLayout Grid.Row="0" Spacing="10">
+
+            <Label x:Name="WifiStatusLabel" 
+                   HorizontalOptions="Center" 
+                   FontSize="18" 
+                   Margin="0,10"/>
+
+            <Label x:Name="EmailLabel"
+                   FontSize="18"
+                   TextColor="Black"
+                   HorizontalOptions="End"
+                   Margin="0,10"/>
+
+            <Frame x:Name="EmailFrame" IsVisible="False" Padding="15" BorderColor="Gray" CornerRadius="10">
+                <VerticalStackLayout Spacing="15">
+                    <Label Text="Vui lòng nhập email của bạn:" FontSize="16"/>
+                    <Entry x:Name="EmailEntry" Placeholder="Email" Keyboard="Email"/>
+                    <Button x:Name="SaveEmailButton" Text="Lưu" Clicked="OnSaveEmailClicked"/>
+                </VerticalStackLayout>
+            </Frame>
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Grid.Row="1" 
+                             x:Name="RefreshPanel" 
+                             IsVisible="False" 
+                             VerticalOptions="Center" 
+                             HorizontalOptions="Center" 
+                             Spacing="30">
+
+            <Button x:Name="RefreshButton"
+                    Text="Làm mới"
+                    Clicked="OnRefreshClicked"
+                    BackgroundColor="#FF9800"
+                    TextColor="White"
+                    FontSize="18"
+                    WidthRequest="200"
+                    HeightRequest="60"/>
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Grid.Row="1" 
+                            x:Name="ButtonsPanel" 
+                            IsVisible="False" 
+                            VerticalOptions="Center" 
+                            HorizontalOptions="Center" 
+                            Spacing="30">
+            <Button x:Name="CheckInButton" 
+                    Text="Chấm công" 
+                    Clicked="OnCheckInClicked"
+                    BackgroundColor="#2196F3"
+                    TextColor="White"
+                    FontSize="18"
+                    WidthRequest="200"
+                    HeightRequest="60"/>
+
+            <Button x:Name="CheckOutButton" 
+                    Text="Ra về" 
+                    Clicked="OnCheckOutClicked"
+                    BackgroundColor="#4CAF50"
+                    TextColor="White"
+                    FontSize="18"
+                    WidthRequest="200" 
+                    HeightRequest="60"/>
+
+        </VerticalStackLayout>
+
+        <Label Grid.Row="2" 
+               x:Name="TimeLabel" 
+               HorizontalOptions="Center" 
+               VerticalOptions="End"
+               FontSize="16"
+               Margin="0,20"/>
+    </Grid>
+
+</ContentPage>
