@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using WifiCheckApp.Services;
 
 namespace WifiCheckApp
 {
@@ -18,8 +19,11 @@ namespace WifiCheckApp
             // Register services
             builder.Services.AddSingleton<IConnectivity>(Connectivity.Current);
             builder.Services.AddSingleton<IPreferences>(Preferences.Default);
+            builder.Services.AddSingleton<IGeolocation>(Geolocation.Default);
             builder.Services.AddSingleton<WifiService>();
             builder.Services.AddSingleton<EmailService>();
+            builder.Services.AddSingleton<LocationService>();
+            builder.Services.AddSingleton<AttendanceSettings>();
             builder.Services.AddSingleton<MainPage>();
 
 #if DEBUG

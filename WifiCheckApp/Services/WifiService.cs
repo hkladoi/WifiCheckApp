@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using WifiCheckApp.Services;
+
 #if ANDROID
+using Android.OS;
+using Android.Net;
 using Android.Net.Wifi;
 using Android.Content;
 using Android.App;
@@ -11,9 +15,21 @@ using Android.App;
 
 namespace WifiCheckApp
 {
+    public class WifiInfo
+    {
+        public string SSID { get; set; }
+        public string BSSID { get; set; }
+        public int SignalStrength { get; set; }
+        public string Capabilities { get; set; }
+    }
+
     public class WifiService
     {
         private readonly IConnectivity _connectivity;
+        private List<WifiInfo> _cachedNetworks = new List<WifiInfo>();
+        private DateTime _lastScanTime = DateTime.MinValue;
+        private const int CACHE_VALID_TIME_MS = 10000; // 10 seconds cache
+        private SemaphoreSlim _scanSemaphore = new SemaphoreSlim(1, 1);
 
         public WifiService(IConnectivity connectivity)
         {
@@ -29,7 +45,7 @@ namespace WifiCheckApp
 
             // Android-specific implementation
 #if ANDROID
-        return await IsConnectedToTargetWifiAndroid(targetSsid, targetGateway);
+            return await Task.Run(() => IsConnectedToTargetWifiAndroidSync(targetSsid, targetGateway));
 #elif WINDOWS
             return await IsConnectedToTargetWifiWindows(targetSsid, targetGateway);
 #else
@@ -38,66 +54,65 @@ namespace WifiCheckApp
         }
 
 #if ANDROID
-    private async Task<bool> IsConnectedToTargetWifiAndroid(string targetSsid, string targetGateway)
-    {
-        try
+        private bool IsConnectedToTargetWifiAndroidSync(string targetSsid, string targetGateway)
         {
-            var allowedBSSIDs = new List<string>
+            try
             {
-                "30:4f:75:39:cb:d1",
-                "30:4f:75:39:cb:d0"
-            }.Select(b => b.ToLower()).ToList();
+                var allowedBSSIDs = new List<string>
+                {
+                    "30:4f:75:39:cb:d1",
+                    "30:4f:75:39:cb:d0"
+                }.Select(b => b.ToLower()).ToList();
 
-            var wifiManager = Android.App.Application.Context.GetSystemService(Android.Content.Context.WifiService) as Android.Net.Wifi.WifiManager;
-            if (wifiManager != null && wifiManager.ConnectionInfo != null)
+                var wifiManager = Android.App.Application.Context.GetSystemService(Android.Content.Context.WifiService) as Android.Net.Wifi.WifiManager;
+                if (wifiManager != null && wifiManager.ConnectionInfo != null)
+                {
+                    string currentSsid = wifiManager.ConnectionInfo.SSID.Replace("\"", "");
+                    string bssid = wifiManager.ConnectionInfo.BSSID?.ToLower();
+
+                    // Check SSID
+                    if (currentSsid != targetSsid)
+                    {
+                        return false;
+                    }
+                    if (!allowedBSSIDs.Contains(bssid?.ToLower()))
+                    {
+                        return false;
+                    }
+
+                    // No need to check gateway for optimization
+                    return true;
+                }
+            }
+            catch (Exception ex)
             {
-                string currentSsid = wifiManager.ConnectionInfo.SSID.Replace("\"", "");
-                string bssid = wifiManager.ConnectionInfo.BSSID?.ToLower();
-                
-                // Check SSID
-                if (currentSsid != targetSsid)
+                Console.WriteLine($"Error checking WiFi: {ex.Message}");
+            }
+
+            return false;
+        }
+
+        private string GetGatewayIP()
+        {
+            try
+            {
+                var wifiManager = (WifiManager)Android.App.Application.Context.GetSystemService(Context.WifiService);
+                var dhcpInfo = wifiManager?.DhcpInfo;
+
+                if (dhcpInfo != null)
                 {
-                    return false;
+                    int gateway = dhcpInfo.Gateway;
+                    return Android.Text.Format.Formatter.FormatIpAddress(gateway);
                 }
-                if(!allowedBSSIDs.Contains(bssid?.ToLower()))
-                {
-                    return false;
-                }
-                
-                // Check Gateway IP (simplified)
-                string gatewayIp = GetGatewayIP();
-                return true;
+
+                return "Không thể lấy Gateway";
+            }
+            catch
+            {
+                return string.Empty;
             }
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error checking WiFi: {ex.Message}");
-        }
-        
-        return false;
-    }
-    
-    private string GetGatewayIP()
-    {
-        try
-        {
-        var wifiManager = (WifiManager)Android.App.Application.Context.GetSystemService(Context.WifiService);
-    var dhcpInfo = wifiManager?.DhcpInfo;
 
-    if (dhcpInfo != null)
-    {
-        int gateway = dhcpInfo.Gateway;
-        return Android.Text.Format.Formatter.FormatIpAddress(gateway);
-    }
-
-    return "Không thể lấy Gateway";
-            //return Android.Net.Wifi.WifiManager.DhcpInfo.Gateway.ToString();
-        }
-        catch
-        {
-            return string.Empty;
-        }
-    }
 #endif
 
 #if WINDOWS
@@ -105,9 +120,6 @@ namespace WifiCheckApp
         {
             try
             {
-                // Get network profile using Windows.Networking APIs or System.Net
-                // This is a simplified check, actual implementation would use Windows APIs
-
                 // Check if connected to any network
                 if (_connectivity.NetworkAccess != NetworkAccess.Internet)
                 {
